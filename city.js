@@ -4,7 +4,7 @@
   const Game = window.Game;
 
   let scene, camera, renderer;
-  let lastTime = 0;
+  let last = 0;
 
   function makeRenderer(){
     renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
@@ -17,14 +17,13 @@
 
   function makeCamera(){
     camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 2000);
+    Game._camera = camera;
   }
 
   function makeLights(){
-    // Sky light
     const hemi = new THREE.HemisphereLight(0xbfd4ff, 0x1a1f2b, 0.9);
     scene.add(hemi);
 
-    // Sun / key light
     const sun = new THREE.DirectionalLight(0xffffff, 0.9);
     sun.position.set(-120, 180, 90);
     sun.castShadow = true;
@@ -38,8 +37,7 @@
     scene.add(sun);
   }
 
-  function makeGround(){
-    // Big ground plane
+  function makeGroundAndRoads(){
     const g = new THREE.PlaneGeometry(1200, 1200);
     const groundMat = new THREE.MeshPhongMaterial({ color: 0x1d2330, shininess: 12 });
     const ground = new THREE.Mesh(g, groundMat);
@@ -47,47 +45,39 @@
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Simple roads as long dark strips
     const roadMat = new THREE.MeshLambertMaterial({ color: 0x111417 });
     for (let i=-3; i<=3; i++){
       const roadZ = new THREE.Mesh(new THREE.BoxGeometry(1200, 0.2, 20), roadMat);
       roadZ.position.set(0, 0.1, i*100);
-      roadZ.receiveShadow = true;
-      scene.add(roadZ);
+      roadZ.receiveShadow = true; scene.add(roadZ);
 
       const roadX = new THREE.Mesh(new THREE.BoxGeometry(20, 0.2, 1200), roadMat);
       roadX.position.set(i*100, 0.1, 0);
-      roadX.receiveShadow = true;
-      scene.add(roadX);
+      roadX.receiveShadow = true; scene.add(roadX);
     }
 
-    // Lane dividers (dashed)
     const lineMat = new THREE.MeshBasicMaterial({ color: 0xf0f7ff });
     for (let i=-3; i<=3; i++){
       for (let k=-10; k<=10; k++){
         const dash = new THREE.Mesh(new THREE.BoxGeometry(8, 0.21, 1), lineMat);
-        dash.position.set(k*50, 0.11, i*100);
-        scene.add(dash);
+        dash.position.set(k*50, 0.11, i*100); scene.add(dash);
 
         const dash2 = new THREE.Mesh(new THREE.BoxGeometry(1, 0.21, 8), lineMat);
-        dash2.position.set(i*100, 0.11, k*50);
-        scene.add(dash2);
+        dash2.position.set(i*100, 0.11, k*50); scene.add(dash2);
       }
     }
   }
 
   function randomBuildingColor(){
-    // cool greys/blues
     const palette = [0x293241, 0x334155, 0x3b4a63, 0x475569, 0x5b6b80, 0x6b7c92];
     return palette[(Math.random()*palette.length)|0];
   }
 
   function makeBuildings(){
-    // Grid blocks around roads
     const blocks = [];
     for (let gx=-3; gx<=3; gx++){
       for (let gz=-3; gz<=3; gz++){
-        if (gx === 0 || gz === 0) continue; // leave cross roads open
+        if (gx === 0 || gz === 0) continue;
         const cx = gx*100, cz = gz*100;
         blocks.push({cx, cz});
       }
@@ -114,7 +104,6 @@
         b.position.set(x, h/2, z);
         b.castShadow = true; b.receiveShadow = true;
 
-        // Window glow strips (simple emissive planes)
         if (h > 40){
           const floors = Math.max(2, (h/10)|0);
           const winMat = new THREE.MeshBasicMaterial({ color: 0xfff0c2 });
@@ -135,22 +124,24 @@
     scene.add(group);
   }
 
-  function handleResize(){
-    camera.aspect = window.innerWidth / window.innerHeight;
+  function resize(){
+    camera.aspect = window.innerWidth/window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
   function animate(t){
     const now = t*0.001;
-    const dt = Math.min(0.05, now - (lastTime||now));
-    lastTime = now;
+    const dt = Math.min(0.05, now - (last||now));
+    last = now;
 
-    // Movement
     const delta = Game.Controls.getMoveDelta(camera, dt);
     camera.position.add(delta);
-    // Keep head at constant height
     camera.position.y = Game.Controls.height();
+
+    Game.Hoardings.update(dt);
+    Game.Gifts.update(dt);
+    Game.Particles.update(dt);
 
     renderer.setClearColor(0x0b1017, 1);
     renderer.render(scene, camera);
@@ -162,12 +153,15 @@
     makeCamera();
     makeRenderer();
     makeLights();
-    makeGround();
+    makeGroundAndRoads();
     makeBuildings();
 
-    Game.Controls.init(camera, renderer.domElement);
+    Game.Controls.init(camera);
+    Game.Hoardings.add(scene);
+    Game.Gifts.add(scene);
+    Game.Particles.add(scene);
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', resize);
     requestAnimationFrame(animate);
   };
 

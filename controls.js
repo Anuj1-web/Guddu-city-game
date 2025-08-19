@@ -7,8 +7,8 @@
     keys: { up:false, down:false, left:false, right:false },
     hasPointerLock: false,
     controls: null,
-    speed: 18,      // movement units / sec
-    height: 3       // camera/player height
+    speed: 18,
+    height: 3
   };
 
   function onKey(e, down){
@@ -20,16 +20,13 @@
     }
   }
 
-  function setupPointerLock(camera, domEl){
+  function setupPointerLock(camera){
     const plc = new THREE.PointerLockControls(camera, document.body);
     state.controls = plc;
     const clickToLock = () => plc.lock();
-    domEl.addEventListener('click', clickToLock);
-
+    document.body.addEventListener('click', clickToLock);
     plc.addEventListener('lock',  ()=> state.hasPointerLock = true);
     plc.addEventListener('unlock',()=> state.hasPointerLock = false);
-
-    // Start slightly above ground
     camera.position.set(0, state.height, 12);
   }
 
@@ -40,7 +37,6 @@
 
   function setupDpad(){
     const dpad = document.getElementById('dpad');
-    // Show D-pad only on touch devices
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
       dpad.style.display = 'block';
     }
@@ -60,19 +56,12 @@
     bind(document.querySelector('.pad.right'), 'right');
   }
 
-  // Public API
   Game.Controls = {
-    init(camera, domEl){
-      setupPointerLock(camera, domEl);
+    init(camera){
+      setupPointerLock(camera);
       setupKeyboard();
       setupDpad();
     },
-    /**
-     * Compute movement delta in world space for this frame
-     * @param {THREE.Camera} camera
-     * @param {number} dt seconds since last frame
-     * @returns {THREE.Vector3} delta
-     */
     getMoveDelta(camera, dt){
       const v = new THREE.Vector3();
       const forward = new THREE.Vector3();
@@ -87,10 +76,8 @@
       if (state.keys.down)  v.addScaledVector(forward, -s);
       if (state.keys.left)  v.addScaledVector(right,   -s);
       if (state.keys.right) v.addScaledVector(right,    s);
-
       return v;
     },
-    controlsObj(){ return state.controls; },
     pointerLocked(){ return state.hasPointerLock; },
     height(){ return state.height; }
   };
