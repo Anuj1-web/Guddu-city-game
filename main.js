@@ -1,112 +1,96 @@
 
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js'
-import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js'
 import { EffectComposer } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { SSAOPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/SSAOPass.js'
 
-import { buildCity } from './city.js'
-import { makePlayer, updatePlayer, isPaused } from './player.js'
-import { makeTraffic, updateTraffic } from './traffic.js'
-import { makeSparkles } from './particles.js'
 import { addSky } from './sky.js'
-import { setupAudio } from './audio.js'
-import { makeIntro, makeHUD, setStatsText, makePause, togglePause } from './ui.js'
+import { buildGround, buildCityBlocks, addBillboards, addTrees, addGiftsAndCandies } from './city.js'
+import { makeSparkles } from './particles.js'
+import { makeIntro, makeHUD, setStatsText } from './utils.js'
+import { makeTraffic, updateTraffic } from './traffic.js'
+import { attachTouchControls } from './controls.js'
+import { spinHoardings } from './hoardings.js'
 
-const CONFIG = {
-  cityBlocks: 8,
-  blockSize: 22,
-  roadWidth: 6,
-  carCount: 40,
-  personHeight: 1.75,
-  walkSpeed: 2.4,
-  runMultiplier: 1.8,
-  fov: 65,
-  bloomStrength: 0.7,
-  shadows: true,
-}
+const CONFIG = { fov:65, bloomStrength:0.75, shadows:true }
 
-let renderer, scene, camera, composer, clock, controls
+let renderer, scene, camera, composer, clock
 let entities = {count:0}
+let hoardingGroup, trafficGroup
 
-const app = document.getElementById('app')
 makeIntro(init)
 
 function init(){
-  scene = new THREE.Scene()
-  scene.background = new THREE.Color(0x0b0f14)
-
+  // Renderer
   renderer = new THREE.WebGLRenderer({ antialias:true })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(window.innerWidth, window.innerHeight)
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.04
+  renderer.toneMappingExposure = 1.05
   renderer.shadowMap.enabled = CONFIG.shadows
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
-  app.appendChild(renderer.domElement)
+  document.getElementById('app').appendChild(renderer.domElement)
 
-  camera = new THREE.PerspectiveCamera(CONFIG.fov, window.innerWidth/window.innerHeight, 0.1, 500)
-  camera.position.set(10,6,12)
+  // Scene & Camera
+  scene = new THREE.Scene()
+  camera = new THREE.PerspectiveCamera(CONFIG.fov, window.innerWidth/window.innerHeight, 0.1, 1000)
+  camera.position.set(12, 8, 14)
+  scene.add(camera)
 
-  controls = new OrbitControls(camera, renderer.domElement)
-  controls.enableDamping = true
-  controls.enablePan = false
-  controls.maxPolarAngle = Math.PI*0.49
-  controls.target.set(0,1.2,0)
-
+  // World
   addSky(scene)
+  scene.add(buildGround())
+  const city = buildCityBlocks(CONFIG, entities); scene.add(city)
+  addTrees(scene)
+  addGiftsAndCandies(scene)
 
-  const sun = new THREE.DirectionalLight(0xffffff,1.0)
-  sun.position.set(20,40,20)
-  sun.castShadow = CONFIG.shadows
-  sun.shadow.mapSize.set(2048,2048)
-  scene.add(sun)
+  // Hoardings row
+  hoardingGroup = new THREE.Group(); addBillboards(hoardingGroup); scene.add(hoardingGroup)
 
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(800,800), new THREE.MeshStandardMaterial({color:0x2a3a4a,roughness:0.95}))
-  ground.rotation.x = -Math.PI/2
-  ground.receiveShadow = true
-  scene.add(ground)
-
-  scene.add(buildCity(CONFIG, entities))
-  const player = makePlayer()
-  scene.add(player.group)
-  const traffic = makeTraffic(CONFIG, entities)
-  scene.add(traffic)
+  // Particles
   scene.add(makeSparkles())
 
+  // Traffic
+  trafficGroup = makeTraffic(entities); scene.add(trafficGroup)
+
+  // Post FX
   composer = new EffectComposer(renderer)
   composer.addPass(new RenderPass(scene, camera))
   composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), CONFIG.bloomStrength,0.9,0.85))
   composer.addPass(new SSAOPass(scene,camera,window.innerWidth,window.innerHeight))
 
-  setupAudio(camera)
-
+  // UI
   makeHUD()
-  makePause()
 
-  window.addEventListener('resize', ()=>{
-    camera.aspect = window.innerWidth/window.innerHeight
-    camera.updateProjectionMatrix()
-    renderer.setSize(window.innerWidth, window.innerHeight)
-    composer.setSize(window.innerWidth, window.innerHeight)
-  })
-  window.addEventListener('keydown', e=>{
-    if(e.code==='Escape'){ togglePause(!isPaused) }
-  })
+  // Events
+  window.addEventListener('resize', onResize)
+  renderer.domElement.addEventListener('wheel', (e)=>{
+    e.preventDefault()
+    const d = Math.sign(e.deltaY)
+    camera.position.multiplyScalar(1 + d*0.05)
+  }, {passive:false})
+
+  // Mobile touch controls
+  attachTouchControls(renderer.domElement, camera)
 
   clock = new THREE.Clock()
   animate()
-  function animate(){
-    requestAnimationFrame(animate)
-    const dt = Math.min(clock.getDelta(),0.033)
-    if(!isPaused){
-      updatePlayer(player,camera,CONFIG,dt)
-      updateTraffic(traffic,CONFIG,dt)
-      controls.update()
-    }
-    setStatsText(`FPS:${Math.round(1/dt)} | Entities:${entities.count}`)
-    composer.render()
-  }
+}
+
+function onResize(){
+  camera.aspect = window.innerWidth/window.innerHeight
+  camera.updateProjectionMatrix()
+  renderer.setSize(window.innerWidth, window.innerHeight)
+  composer.setSize(window.innerWidth, window.innerHeight)
+}
+
+function animate(){
+  requestAnimationFrame(animate)
+  const dt = Math.min(clock.getDelta(), 0.033)
+  updateTraffic(trafficGroup, dt)
+  spinHoardings(hoardingGroup, dt)
+  setStatsText(`FPS: ${Math.round(1/dt)} | Entities: ${entities.count}`)
+  composer.render()
 }
