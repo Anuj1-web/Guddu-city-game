@@ -6,9 +6,11 @@
   const state = {
     keys: { up:false, down:false, left:false, right:false },
     hasPointerLock: false,
-    controls: null,
     speed: 18,
-    height: 3
+    height: 3,
+    vel: new THREE.Vector3(), // for smoothing
+    accel: 60,
+    damping: 0.85
   };
 
   function onKey(e, down){
@@ -22,12 +24,11 @@
 
   function setupPointerLock(camera){
     const plc = new THREE.PointerLockControls(camera, document.body);
-    state.controls = plc;
     const clickToLock = () => plc.lock();
     document.body.addEventListener('click', clickToLock);
     plc.addEventListener('lock',  ()=> state.hasPointerLock = true);
     plc.addEventListener('unlock',()=> state.hasPointerLock = false);
-    camera.position.set(0, state.height, 12);
+    camera.position.set(0, state.height, 8);
   }
 
   function setupKeyboard(){
@@ -35,51 +36,78 @@
     document.addEventListener('keyup',   e => onKey(e, false));
   }
 
-  function setupDpad(){
-    const dpad = document.getElementById('dpad');
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-      dpad.style.display = 'block';
+  // Mobile virtual joystick (smooth)
+  function setupJoystick(){
+    const joy = document.getElementById('joystick');
+    const stick = document.getElementById('joyStick');
+    const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    if (!isTouch) return;
+    joy.style.display = 'block';
+
+    let origin = {x: 64, y: 64};
+    let dragging = false;
+
+    function setStick(x, y){
+      const dx = Game.clamp(x, 16, 112) - 32;
+      const dy = Game.clamp(y, 16, 112) - 32;
+      stick.style.left = (dx) + 'px';
+      stick.style.top  = (dy) + 'px';
+      const nx = (dx-32)/32, ny = (dy-32)/32; // -1..1
+      state.keys.up    = ny < -0.2;
+      state.keys.down  = ny >  0.2;
+      state.keys.left  = nx < -0.2;
+      state.keys.right = nx >  0.2;
     }
-    const set = (dir, val) => { state.keys[dir] = val; };
-    const bind = (el, dir) => {
-      const start = (e)=>{ e.preventDefault(); set(dir,true); };
-      const end   = (e)=>{ e.preventDefault(); set(dir,false); };
-      el.addEventListener('touchstart', start, {passive:false});
-      el.addEventListener('touchend',   end,   {passive:false});
-      el.addEventListener('mousedown',  start);
-      el.addEventListener('mouseup',    end);
-      el.addEventListener('mouseleave', end);
+
+    function resetStick(){
+      stick.style.left = '32px'; stick.style.top = '32px';
+      state.keys.up = state.keys.down = state.keys.left = state.keys.right = false;
+    }
+
+    const start = (e)=>{ dragging = true; };
+    const move  = (e)=>{
+      if(!dragging) return;
+      const t = (e.touches && e.touches[0]) || e;
+      const rect = joy.getBoundingClientRect();
+      const x = t.clientX - rect.left;
+      const y = t.clientY - rect.top;
+      setStick(x, y);
     };
-    bind(document.querySelector('.pad.up'), 'up');
-    bind(document.querySelector('.pad.down'), 'down');
-    bind(document.querySelector('.pad.left'), 'left');
-    bind(document.querySelector('.pad.right'), 'right');
+    const end   = ()=>{ dragging = false; resetStick(); };
+
+    stick.addEventListener('touchstart', start, {passive:false});
+    stick.addEventListener('touchmove',  move,  {passive:false});
+    stick.addEventListener('touchend',   end);
+    stick.addEventListener('mousedown',  start);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup',   end);
   }
 
   Game.Controls = {
     init(camera){
       setupPointerLock(camera);
       setupKeyboard();
-      setupDpad();
+      setupJoystick();
     },
     getMoveDelta(camera, dt){
-      const v = new THREE.Vector3();
       const forward = new THREE.Vector3();
-      const right = new THREE.Vector3();
-
+      const right   = new THREE.Vector3();
       camera.getWorldDirection(forward);
       forward.y = 0; forward.normalize();
       right.crossVectors(forward, new THREE.Vector3(0,1,0)).negate().normalize();
 
-      const s = state.speed * dt;
-      if (state.keys.up)    v.addScaledVector(forward,  s);
-      if (state.keys.down)  v.addScaledVector(forward, -s);
-      if (state.keys.left)  v.addScaledVector(right,   -s);
-      if (state.keys.right) v.addScaledVector(right,    s);
-      return v;
+      const input = new THREE.Vector3();
+      if (state.keys.up)    input.add(forward);
+      if (state.keys.down)  input.addScaledVector(forward, -1);
+      if (state.keys.left)  input.addScaledVector(right, -1);
+      if (state.keys.right) input.add(right);
+
+      if (input.lengthSq() > 0) input.normalize().multiplyScalar(state.accel*dt);
+      state.vel.add(input);
+      state.vel.multiplyScalar(state.damping);
+      return state.vel.clone().multiplyScalar(dt);
     },
     pointerLocked(){ return state.hasPointerLock; },
     height(){ return state.height; }
   };
-
 })();

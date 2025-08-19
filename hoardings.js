@@ -38,11 +38,7 @@
         new THREE.Vector3(160,  22, -100),
       ];
 
-      function candidates(name){
-        return [
-          name
-        ];
-      }
+      function candidates(name){ return [ name ]; }
 
       mats = [];
       positions.forEach((p, i)=>{
@@ -54,8 +50,12 @@
         group.add(mesh);
         mats.push(mat);
 
-        const frame = new THREE.Mesh(new THREE.PlaneGeometry(41, 25), new THREE.MeshBasicMaterial({color:0x111418}));
-        frame.position.copy(p); frame.position.z += 0.01;
+        // subtle neon frame
+        const frame = new THREE.Mesh(
+          new THREE.PlaneGeometry(40.8, 24.8),
+          new THREE.MeshBasicMaterial({ color: 0x2dd4ff, transparent:true, opacity:0.18 })
+        );
+        frame.position.copy(p); frame.position.z += 0.02;
         frame.lookAt(new THREE.Vector3(p.x, p.y, p.z+1));
         group.add(frame);
       });
@@ -63,7 +63,7 @@
     },
     update(dt){
       timer += dt;
-      if (timer > 3){
+      if (timer > 2.8){
         timer = 0;
         slideIndex = (slideIndex + 1) % imageNames.length;
         const name = imageNames[slideIndex];
@@ -74,5 +74,4 @@
       }
     }
   };
-
 })();

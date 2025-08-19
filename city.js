@@ -16,12 +16,12 @@
   }
 
   function makeCamera(){
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 2000);
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 2200);
     Game._camera = camera;
   }
 
   function makeLights(){
-    const hemi = new THREE.HemisphereLight(0xbfd4ff, 0x1a1f2b, 0.9);
+    const hemi = new THREE.HemisphereLight(0xcfe6ff, 0x10131a, 0.8);
     scene.add(hemi);
 
     const sun = new THREE.DirectionalLight(0xffffff, 0.9);
@@ -29,47 +29,47 @@
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 600;
-    sun.shadow.camera.left = -200;
-    sun.shadow.camera.right = 200;
-    sun.shadow.camera.top = 200;
-    sun.shadow.camera.bottom = -200;
+    sun.shadow.camera.far = 800;
+    sun.shadow.camera.left = -280;
+    sun.shadow.camera.right = 280;
+    sun.shadow.camera.top = 280;
+    sun.shadow.camera.bottom = -280;
     scene.add(sun);
   }
 
   function makeGroundAndRoads(){
-    const g = new THREE.PlaneGeometry(1200, 1200);
-    const groundMat = new THREE.MeshPhongMaterial({ color: 0x1d2330, shininess: 12 });
+    const g = new THREE.PlaneGeometry(1600, 1600);
+    const groundMat = new THREE.MeshPhongMaterial({ color: 0x1a202c, shininess: 14 });
     const ground = new THREE.Mesh(g, groundMat);
     ground.rotation.x = -Math.PI/2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    const roadMat = new THREE.MeshLambertMaterial({ color: 0x111417 });
-    for (let i=-3; i<=3; i++){
-      const roadZ = new THREE.Mesh(new THREE.BoxGeometry(1200, 0.2, 20), roadMat);
-      roadZ.position.set(0, 0.1, i*100);
+    const roadMat = new THREE.MeshLambertMaterial({ color: 0x0f1217 });
+    for (let i=-4; i<=4; i++){
+      const roadZ = new THREE.Mesh(new THREE.BoxGeometry(1600, 0.2, 22), roadMat);
+      roadZ.position.set(0, 0.09, i*120);
       roadZ.receiveShadow = true; scene.add(roadZ);
 
-      const roadX = new THREE.Mesh(new THREE.BoxGeometry(20, 0.2, 1200), roadMat);
-      roadX.position.set(i*100, 0.1, 0);
+      const roadX = new THREE.Mesh(new THREE.BoxGeometry(22, 0.2, 1600), roadMat);
+      roadX.position.set(i*120, 0.09, 0);
       roadX.receiveShadow = true; scene.add(roadX);
     }
 
-    const lineMat = new THREE.MeshBasicMaterial({ color: 0xf0f7ff });
-    for (let i=-3; i<=3; i++){
-      for (let k=-10; k<=10; k++){
-        const dash = new THREE.Mesh(new THREE.BoxGeometry(8, 0.21, 1), lineMat);
-        dash.position.set(k*50, 0.11, i*100); scene.add(dash);
+    const lineMat = new THREE.MeshBasicMaterial({ color: 0xf9fbff });
+    for (let i=-4; i<=4; i++){
+      for (let k=-15; k<=15; k++){
+        const dash = new THREE.Mesh(new THREE.BoxGeometry(10, 0.21, 1.2), lineMat);
+        dash.position.set(k*55, 0.11, i*120); scene.add(dash);
 
-        const dash2 = new THREE.Mesh(new THREE.BoxGeometry(1, 0.21, 8), lineMat);
-        dash2.position.set(i*100, 0.11, k*50); scene.add(dash2);
+        const dash2 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.21, 10), lineMat);
+        dash2.position.set(i*120, 0.11, k*55); scene.add(dash2);
       }
     }
   }
 
   function randomBuildingColor(){
-    const palette = [0x293241, 0x334155, 0x3b4a63, 0x475569, 0x5b6b80, 0x6b7c92];
+    const palette = [0x2a3243, 0x334155, 0x3b4a63, 0x475569, 0x5b6b80, 0x6b7c92];
     return palette[(Math.random()*palette.length)|0];
   }
 
@@ -78,7 +78,7 @@
     for (let gx=-3; gx<=3; gx++){
       for (let gz=-3; gz<=3; gz++){
         if (gx === 0 || gz === 0) continue;
-        const cx = gx*100, cz = gz*100;
+        const cx = gx*120, cz = gz*120;
         blocks.push({cx, cz});
       }
     }
@@ -86,36 +86,34 @@
     const group = new THREE.Group();
     group.name = 'Buildings';
     blocks.forEach(({cx, cz})=>{
-      const count = 12 + (Math.random()*8|0);
+      const count = 18 + (Math.random()*8|0);
       for (let i=0;i<count;i++){
-        const w = Game.rand(8, 20);
-        const d = Game.rand(8, 20);
-        const h = Game.rand(18, 110);
-        const x = cx + Game.rand(-40, 40);
-        const z = cz + Game.rand(-40, 40);
+        const w = Game.rand(10, 26);
+        const d = Game.rand(10, 26);
+        const h = Game.rand(24, 140);
+        const x = cx + Game.rand(-45, 45);
+        const z = cz + Game.rand(-45, 45);
 
         const geo = new THREE.BoxGeometry(w, h, d);
         const mat = new THREE.MeshPhongMaterial({
           color: randomBuildingColor(),
           emissive: 0x0a0c12,
-          shininess: 18
+          shininess: 22,
+          specular: 0x8898a6
         });
         const b = new THREE.Mesh(geo, mat);
         b.position.set(x, h/2, z);
         b.castShadow = true; b.receiveShadow = true;
 
-        if (h > 40){
+        // glowing window strips
+        if (h > 36){
           const floors = Math.max(2, (h/10)|0);
-          const winMat = new THREE.MeshBasicMaterial({ color: 0xfff0c2 });
+          const winMat = new THREE.MeshBasicMaterial({ color: 0xfff3c0, transparent:true, opacity: 0.9 });
           for (let f=1; f<floors; f++){
-            const p = new THREE.Mesh(new THREE.PlaneGeometry(w*0.9, 0.6), winMat);
-            p.position.set(0, (h/floors)*f - h/2 + 0.5, d/2 + 0.01);
+            const p = new THREE.Mesh(new THREE.PlaneGeometry(w*0.92, 0.7), winMat);
+            p.position.set(0, (h/floors)*f - h/2 + 0.6, d/2 + 0.01);
             b.add(p);
-
-            const p2 = p.clone();
-            p2.position.z = -d/2 - 0.01;
-            p2.rotation.y = Math.PI;
-            b.add(p2);
+            const p2 = p.clone(); p2.position.z = -d/2 - 0.01; p2.rotation.y = Math.PI; b.add(p2);
           }
         }
         group.add(b);
@@ -139,6 +137,7 @@
     camera.position.add(delta);
     camera.position.y = Game.Controls.height();
 
+    Game.Sky.update(dt);
     Game.Hoardings.update(dt);
     Game.Gifts.update(dt);
     Game.Particles.update(dt);
@@ -150,9 +149,11 @@
 
   Game.start = function(){
     scene = new THREE.Scene();
+    Game._scene = scene;
     makeCamera();
     makeRenderer();
     makeLights();
+    Game.Sky.add(scene);
     makeGroundAndRoads();
     makeBuildings();
 
