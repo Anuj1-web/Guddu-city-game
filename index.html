@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>Guddu City Game — Base</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#0b0f14; font-family:system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif; }
+    canvas { display:block; }
+
+    /* HUD */
+    #hud {
+      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.15);
+      padding: 8px 14px; border-radius: 10px; font-size: 14px; backdrop-filter: blur(6px); color: #e6f0ff; z-index: 10;
+      user-select: none; -webkit-user-select: none;
+    }
+
+    /* Mobile D-pad */
+    #dpad {
+      position: fixed; right: 16px; bottom: 16px; width: 180px; height: 180px; z-index: 12;
+      display: none; /* shown on touch devices by JS */
+    }
+    .pad {
+      position:absolute; width:64px; height:64px; border-radius: 16px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.25);
+      display:flex; align-items:center; justify-content:center;
+      font-weight:700; color:#e6f0ff; backdrop-filter: blur(4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pad:active { transform: scale(0.96); }
+    .pad.up    { left:58px; top:0; }
+    .pad.down  { left:58px; bottom:0; }
+    .pad.left  { left:0; top:58px; }
+    .pad.right { right:0; top:58px; }
+
+    /* Help badge (top-left) */
+    #help {
+      position: fixed; left:10px; top:10px; z-index: 10;
+      color:#9fb6ff; font-size:12px; opacity:.8; user-select:none;
+    }
+  </style>
+</head>
+<body>
+  <div id="help">Desktop: Click to lock mouse • Move: WASD / Arrows • Mobile: use D-pad</div>
+  <div id="hud">Guddu City — Base Scene Loaded ✅</div>
+
+  <!-- ✅ Stable Three.js r128 so PointerLockControls works in non-module form -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+
+  <!-- Our game scripts -->
+  <script src="js/utils.js"></script>
+  <script src="js/controls.js"></script>
+  <script src="js/city.js"></script>
+
+  <script>
+    // boot
+    window.addEventListener('DOMContentLoaded', () => {
+      window.Game.start();
+    });
+  </script>
+
+  <!-- Mobile D-pad -->
+  <div id="dpad">
+    <div class="pad up"    data-dir="up">▲</div>
+    <div class="pad down"  data-dir="down">▼</div>
+    <div class="pad left"  data-dir="left">◀</div>
+    <div class="pad right" data-dir="right">▶</div>
+  </div>
+</body>
+</html>
