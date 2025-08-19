@@ -5,6 +5,7 @@
 
   Game.clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   Game.rand = (min, max) => min + Math.random()*(max-min);
+  Game.lerp = (a,b,t)=> a + (b-a)*t;
 
   Game.toast = function(text, ms=2600){
     const el = document.getElementById('message');
@@ -15,31 +16,43 @@
     el._t = setTimeout(()=>{ el.style.display='none'; }, ms);
   };
 
-  Game.makeLabelTexture = function(text='MISSING', bg1='#1f2a44', bg2='#0d1320'){
-    const size = 512, c = document.createElement('canvas');
+  Game.makeTextTexture = function(title, subtitle){
+    const size = 1024, c = document.createElement('canvas');
     c.width = c.height = size;
     const ctx = c.getContext('2d');
+    // gradient background
     const g = ctx.createLinearGradient(0,0,size,size);
-    g.addColorStop(0, bg1); g.addColorStop(1, bg2);
+    g.addColorStop(0, '#1a2a40'); g.addColorStop(1, '#0d1320');
     ctx.fillStyle = g; ctx.fillRect(0,0,size,size);
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.font = 'bold 52px system-ui, sans-serif';
+
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.font = 'bold 90px system-ui, sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(text, size/2, size/2);
+    ctx.fillText(title, size/2, size/2 - 80);
+
+    if (subtitle) {
+      ctx.fillStyle = 'rgba(173, 212, 255, 0.95)';
+      ctx.font = '600 56px system-ui, sans-serif';
+      ctx.fillText(subtitle, size/2, size/2 + 50);
+    }
+
     const tex = new THREE.CanvasTexture(c);
-    tex.anisotropy = 4; tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.anisotropy = Game.maxAniso || 4;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
     return tex;
   };
 
-  Game.safeLoadTexture = function(paths, onLoad){
+  Game.safeLoadTexture = function(path, onLoad){
     const loader = new THREE.TextureLoader();
-    const list = Array.isArray(paths) ? paths.slice() : [paths];
-    let done = false;
-    function tryNext(){
-      if(!list.length){ onLoad(Game.makeLabelTexture()); return; }
-      const p = list.shift();
-      loader.load(p, tex => { if(!done){ done=true; tex.anisotropy=4; onLoad(tex); } }, undefined, tryNext);
-    }
-    tryNext();
+    loader.load(path, (tex)=>{
+      tex.anisotropy = Game.maxAniso || 4;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      onLoad(tex);
+    }, undefined, ()=>{
+      // fallback
+      onLoad(Game.makeTextTexture('Image Missing', 'check filename'));
+    });
   };
 })();

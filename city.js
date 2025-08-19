@@ -13,32 +13,34 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
+    Game._renderer = renderer;
+    Game.maxAniso = renderer.capabilities.getMaxAnisotropy();
   }
 
   function makeCamera(){
-    camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 2200);
+    camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 2400);
     Game._camera = camera;
   }
 
   function makeLights(){
-    const hemi = new THREE.HemisphereLight(0xcfe6ff, 0x10131a, 0.8);
+    const hemi = new THREE.HemisphereLight(0xcfe6ff, 0x10131a, 0.85);
     scene.add(hemi);
 
-    const sun = new THREE.DirectionalLight(0xffffff, 0.9);
-    sun.position.set(-120, 180, 90);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+    sun.position.set(-160, 220, 120);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 800;
-    sun.shadow.camera.left = -280;
-    sun.shadow.camera.right = 280;
-    sun.shadow.camera.top = 280;
-    sun.shadow.camera.bottom = -280;
+    sun.shadow.camera.far = 1200;
+    sun.shadow.camera.left = -380;
+    sun.shadow.camera.right = 380;
+    sun.shadow.camera.top = 380;
+    sun.shadow.camera.bottom = -380;
     scene.add(sun);
   }
 
   function makeGroundAndRoads(){
-    const g = new THREE.PlaneGeometry(1600, 1600);
+    const g = new THREE.PlaneGeometry(2000, 2000);
     const groundMat = new THREE.MeshPhongMaterial({ color: 0x1a202c, shininess: 14 });
     const ground = new THREE.Mesh(g, groundMat);
     ground.rotation.x = -Math.PI/2;
@@ -46,24 +48,24 @@
     scene.add(ground);
 
     const roadMat = new THREE.MeshLambertMaterial({ color: 0x0f1217 });
-    for (let i=-4; i<=4; i++){
-      const roadZ = new THREE.Mesh(new THREE.BoxGeometry(1600, 0.2, 22), roadMat);
+    for (let i=-5; i<=5; i++){
+      const roadZ = new THREE.Mesh(new THREE.BoxGeometry(2000, 0.2, 22), roadMat);
       roadZ.position.set(0, 0.09, i*120);
       roadZ.receiveShadow = true; scene.add(roadZ);
 
-      const roadX = new THREE.Mesh(new THREE.BoxGeometry(22, 0.2, 1600), roadMat);
+      const roadX = new THREE.Mesh(new THREE.BoxGeometry(22, 0.2, 2000), roadMat);
       roadX.position.set(i*120, 0.09, 0);
       roadX.receiveShadow = true; scene.add(roadX);
     }
 
     const lineMat = new THREE.MeshBasicMaterial({ color: 0xf9fbff });
-    for (let i=-4; i<=4; i++){
-      for (let k=-15; k<=15; k++){
+    for (let i=-5; i<=5; i++){
+      for (let k=-18; k<=18; k++){
         const dash = new THREE.Mesh(new THREE.BoxGeometry(10, 0.21, 1.2), lineMat);
-        dash.position.set(k*55, 0.11, i*120); scene.add(dash);
+        dash.position.set(k*60, 0.11, i*120); scene.add(dash);
 
         const dash2 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.21, 10), lineMat);
-        dash2.position.set(i*120, 0.11, k*55); scene.add(dash2);
+        dash2.position.set(i*120, 0.11, k*60); scene.add(dash2);
       }
     }
   }
@@ -75,8 +77,8 @@
 
   function makeBuildings(){
     const blocks = [];
-    for (let gx=-3; gx<=3; gx++){
-      for (let gz=-3; gz<=3; gz++){
+    for (let gx=-4; gx<=4; gx++){
+      for (let gz=-4; gz<=4; gz++){
         if (gx === 0 || gz === 0) continue;
         const cx = gx*120, cz = gz*120;
         blocks.push({cx, cz});
@@ -86,13 +88,13 @@
     const group = new THREE.Group();
     group.name = 'Buildings';
     blocks.forEach(({cx, cz})=>{
-      const count = 18 + (Math.random()*8|0);
+      const count = 20 + (Math.random()*10|0);
       for (let i=0;i<count;i++){
-        const w = Game.rand(10, 26);
-        const d = Game.rand(10, 26);
-        const h = Game.rand(24, 140);
-        const x = cx + Game.rand(-45, 45);
-        const z = cz + Game.rand(-45, 45);
+        const w = Game.rand(10, 30);
+        const d = Game.rand(10, 30);
+        const h = Game.rand(28, 160);
+        const x = cx + Game.rand(-55, 55);
+        const z = cz + Game.rand(-55, 55);
 
         const geo = new THREE.BoxGeometry(w, h, d);
         const mat = new THREE.MeshPhongMaterial({
@@ -105,7 +107,6 @@
         b.position.set(x, h/2, z);
         b.castShadow = true; b.receiveShadow = true;
 
-        // glowing window strips
         if (h > 36){
           const floors = Math.max(2, (h/10)|0);
           const winMat = new THREE.MeshBasicMaterial({ color: 0xfff3c0, transparent:true, opacity: 0.9 });
@@ -150,6 +151,8 @@
   Game.start = function(){
     scene = new THREE.Scene();
     Game._scene = scene;
+    scene.fog = new THREE.FogExp2(0x0b1017, 0.0009);
+
     makeCamera();
     makeRenderer();
     makeLights();

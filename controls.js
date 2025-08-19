@@ -6,11 +6,11 @@
   const state = {
     keys: { up:false, down:false, left:false, right:false },
     hasPointerLock: false,
-    speed: 18,
+    speed: 16,
     height: 3,
-    vel: new THREE.Vector3(), // for smoothing
-    accel: 60,
-    damping: 0.85
+    vel: new THREE.Vector3(),
+    accel: 36,
+    damping: 0.90
   };
 
   function onKey(e, down){
@@ -24,8 +24,7 @@
 
   function setupPointerLock(camera){
     const plc = new THREE.PointerLockControls(camera, document.body);
-    const clickToLock = () => plc.lock();
-    document.body.addEventListener('click', clickToLock);
+    document.body.addEventListener('click', ()=> plc.lock());
     plc.addEventListener('lock',  ()=> state.hasPointerLock = true);
     plc.addEventListener('unlock',()=> state.hasPointerLock = false);
     camera.position.set(0, state.height, 8);
@@ -36,7 +35,6 @@
     document.addEventListener('keyup',   e => onKey(e, false));
   }
 
-  // Mobile virtual joystick (smooth)
   function setupJoystick(){
     const joy = document.getElementById('joystick');
     const stick = document.getElementById('joyStick');
@@ -44,12 +42,11 @@
     if (!isTouch) return;
     joy.style.display = 'block';
 
-    let origin = {x: 64, y: 64};
     let dragging = false;
 
     function setStick(x, y){
-      const dx = Game.clamp(x, 16, 112) - 32;
-      const dy = Game.clamp(y, 16, 112) - 32;
+      const dx = Game.clamp(x, 18, 114) - 34;
+      const dy = Game.clamp(y, 18, 114) - 34;
       stick.style.left = (dx) + 'px';
       stick.style.top  = (dy) + 'px';
       const nx = (dx-32)/32, ny = (dy-32)/32; // -1..1
@@ -60,17 +57,16 @@
     }
 
     function resetStick(){
-      stick.style.left = '32px'; stick.style.top = '32px';
+      stick.style.left = '34px'; stick.style.top = '34px';
       state.keys.up = state.keys.down = state.keys.left = state.keys.right = false;
     }
 
-    const start = (e)=>{ dragging = true; };
+    const start = ()=>{ dragging = true; };
     const move  = (e)=>{
       if(!dragging) return;
       const t = (e.touches && e.touches[0]) || e;
       const rect = joy.getBoundingClientRect();
-      const x = t.clientX - rect.left;
-      const y = t.clientY - rect.top;
+      const x = t.clientX - rect.left, y = t.clientY - rect.top;
       setStick(x, y);
     };
     const end   = ()=>{ dragging = false; resetStick(); };
